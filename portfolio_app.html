@@ -166,4 +166,143 @@ nav {
 </nav>
 
 <div class="content">
-  <div id="market" class="
+  <div id="market" class="page active">
+    <div class="summary-grid">
+      <div class="s-card">
+        <div class="s-lbl">NASDAQ 100</div>
+        <div class="s-val" id="vNQ">----</div>
+        <div class="s-chg" id="cNQ">--%</div>
+      </div>
+      <div class="s-card">
+        <div class="s-lbl">S&P 500</div>
+        <div class="s-val" id="vSP">----</div>
+        <div class="s-chg" id="cSP">--%</div>
+      </div>
+      <div class="s-card">
+        <div class="s-lbl">KOSPI 200</div>
+        <div class="s-val" id="vKS">----</div>
+        <div class="s-chg" id="cKS">--%</div>
+      </div>
+      <div class="s-card">
+        <div class="s-lbl">FEAR & GREED</div>
+        <div class="s-val" style="color:var(--accent-gold)">Neutral</div>
+        <div class="s-chg" style="color:var(--text-dim)">Index: 52</div>
+      </div>
+    </div>
+
+    <div class="mcard">
+      <h2 style="font-size:18px; margin-bottom:20px;">글로벌 주요 자산 실시간 시세</h2>
+      <div class="table-container">
+        <table class="otbl">
+          <thead>
+            <tr>
+              <th>자산명</th>
+              <th>현재가</th>
+              <th>변동($)</th>
+              <th>변동률(%)</th>
+              <th>24H 차트</th>
+            </tr>
+          </thead>
+          <tbody id="quoteTbody">
+            <tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-dim);">데이터를 불러오는 중...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="mcard">
+      <h2 style="font-size:18px; margin-bottom:10px;">자산군 분포 (Asset Allocation)</h2>
+      <div class="chart-box">
+        <canvas id="mainChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Finnhub API 설정
+const FH_KEY = 'd7lkgm9r01qm7o0c684gd7lkgm9r01qm7o0c6850';
+const FH = 'https://finnhub.io/api/v1';
+
+async function fetchQuote(symbol) {
+  const r = await fetch(`${FH}/quote?symbol=${symbol}&token=${FH_KEY}`);
+  return r.json();
+}
+
+async function initDashboard() {
+  // 상단 요약 데이터
+  const indices = [
+    {s:'QQQ', v:'vNQ', c:'cNQ'},
+    {s:'SPY', v:'vSP', c:'cSP'},
+    {s:'EWY', v:'vKS', c:'cKS'}
+  ];
+
+  for (const idx of indices) {
+    const d = await fetchQuote(idx.s);
+    if(d.c) {
+      const pct = ((d.c - d.pc) / d.pc * 100).toFixed(2);
+      document.getElementById(idx.v).innerText = `$${d.c.toLocaleString()}`;
+      const el = document.getElementById(idx.c);
+      el.innerText = (pct >= 0 ? '+' : '') + pct + '%';
+      el.className = 's-chg ' + (pct >= 0 ? 'up' : 'dn');
+    }
+  }
+
+  // 실시간 테이블 데이터
+  const watch = ['AAPL', 'TSLA', 'NVDA', 'MSFT', 'AMZN', 'GOOGL'];
+  let html = '';
+  for (const s of watch) {
+    const d = await fetchQuote(s);
+    const pct = ((d.c - d.pc) / d.pc * 100).toFixed(2);
+    const cls = pct >= 0 ? 'up' : 'dn';
+    html += `
+      <tr>
+        <td style="font-weight:600; color:var(--accent-cyan)">${s}</td>
+        <td style="font-weight:600">$${d.c}</td>
+        <td class="${cls}">${(d.c - d.pc).toFixed(2)}</td>
+        <td class="${cls}">${pct}%</td>
+        <td style="color:var(--text-dim); font-size:11px;">데이터 준비중</td>
+      </tr>
+    `;
+  }
+  document.getElementById('quoteTbody').innerHTML = html;
+
+  // 차트 생성 (그라데이션 효과)
+  const ctx = document.getElementById('mainChart').getContext('2d');
+  new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: ['1월', '2월', '3월', '4월', '5월', '6월'],
+      datasets: [{
+        label: '버핏 포트폴리오 수익률',
+        data: [10, 15, 12, 18, 25, 22],
+        borderColor: '#a855f7',
+        backgroundColor: 'rgba(168, 85, 247, 0.1)',
+        fill: true,
+        tension: 0.4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid: { display: false }, ticks: { color: '#8b949e' } },
+        y: { grid: { color: '#30363d' }, ticks: { color: '#8b949e' } }
+      }
+    }
+  });
+}
+
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  el.classList.add('active');
+}
+
+window.onload = initDashboard;
+</script>
+
+</body>
+</html>
